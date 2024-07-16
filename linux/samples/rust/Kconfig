@@ -20,6 +20,11 @@ config SAMPLE_RUST_MINIMAL
 
 	  If unsure, say N.
 
+config SAMPLE_RUST_HELLOWORLD
+	tristate "Helloworld"
+	help
+	  This option is written by KamijoToma for cicv-r4l assignment 3
+
 config SAMPLE_RUST_PRINT
 	tristate "Printing macros"
 	help

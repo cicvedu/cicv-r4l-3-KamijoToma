@@ -34,3 +34,29 @@ out-of-tree module的代码文件夹不在内核代码树内，却能够加载�
 这类模块并不嵌入内核中，而是通过类似动态链接库的方式在需要时动态加载进入内核。为此，内核中实现了一套动态加载和卸载模块的机制，这类内核模块也需要编译为特殊的格式ko，即kernel object。
 在运行阶段，内核根据需要动态加载模块到内核中。模块代码与内核代码动态交互。
 
+## 作业3：使用rust编写一个简单的内核模块
+
+主要涉及到对Kconfig和Makefile的修改。
+
+修改Kconfig，加入下面的代码
+```
+config SAMPLE_RUST_HELLOWORLD
+	tristate "Helloworld"
+	help
+	  This option is written by KamijoToma for cicv-r4l assignment 3
+```
+修改Makefile，加入下面一行
+```makefile
+obj-$(CONFIG_SAMPLE_RUST_HELLOWORLD)	+= rust_helloworld.o
+```
+
+运行`menuconfig`，能观察到出现了自定义的模块选项：
+![rust-helloworld-menuconfig](rust-helloworld-menuconfig.png)
+
+运行编译，成功编译了模块
+
+![compile successful](rust_helloworld-compile-success.png)
+
+进入QEMU系统，加载模块，成功输出了信息。
+
+![QEMU Rust helloworld successful](qemu-rust-helloworld-mod-succ.png)
