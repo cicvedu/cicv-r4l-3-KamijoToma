@@ -60,3 +60,40 @@ obj-$(CONFIG_SAMPLE_RUST_HELLOWORLD)	+= rust_helloworld.o
 进入QEMU系统，加载模块，成功输出了信息。
 
 ![QEMU Rust helloworld successful](qemu-rust-helloworld-mod-succ.png)
+
+## 作业4：修改e1000 rust内核模块
+
+首先开启rust-analyzer补全。对内核代码树应用patch，并在模块文件夹下运行命令
+```
+make -C ../linux M=$PWD rust-analyzer
+```
+之后编辑VSCode的`settings.json`，手动指定项目文件。
+
+```json
+{
+    "rust-analyzer.linkedProjects": [
+        "src_e1000/rust-project.json"
+    ]
+}
+```
+
+然后确保已经安装了rust源代码 `rustup component add rust-src`
+
+重启rust-analyzer插件即可启用代码补全功能
+
+观察代码发现，在probe阶段申请的bar内存没有被释放。由于R4L框架未提供相关释放函数，因此hack r4l框架添加相应代码即可。
+除此之外，还需要实现stop函数的内容以释放网络层内容。
+
+运行截图
+
+第一次加载模块成功ping通：
+
+![first ping](first-ping.png)
+
+
+第二次加载模块成功ping通：
+![second chance](second-ping)
+
+*** 本作业参考了群内同学的讨论内容 ***
+
+

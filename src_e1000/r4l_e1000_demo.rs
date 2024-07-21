@@ -191,8 +191,17 @@ impl net::DeviceOperations for NetDevice {
         Ok(())
     }
 
-    fn stop(_dev: &net::Device, _data: &NetDevicePrvData) -> Result {
+    fn stop(dev: &net::Device, data: &NetDevicePrvData) -> Result {
         pr_info!("Rust for linux e1000 driver demo (net device stop)\n");
+        dev.netif_carrier_off();
+        dev.netif_stop_queue();
+        unsafe {
+            Box::from_raw(
+                data._irq_handler
+                    .load(core::sync::atomic::Ordering::Relaxed),
+            );
+        }
+        drop(data);
         Ok(())
     }
 
@@ -295,9 +304,12 @@ impl kernel::irq::Handler for E1000InterruptHandler {
 /// the private data for the adapter
 struct E1000DrvPrvData {
     _netdev_reg: net::Registration<NetDevice>,
-    pci_ptr: usize,
+    pci_ptr: Arc<*mut bindings::pci_dev>,
     bars: i32,
 }
+
+unsafe impl Send for E1000DrvPrvData {}
+unsafe impl Sync for E1000DrvPrvData {}
 
 impl driver::DeviceRemoval for E1000DrvPrvData {
     fn device_remove(&self) {
@@ -467,7 +479,7 @@ impl pci::Driver for E1000Drv {
                 // Must hold this registration, or the device will be removed.
                 _netdev_reg: netdev_reg,
                 bars: bars,
-                pci_ptr: dev.get_pci_dev_ptr() as usize
+                pci_ptr: Arc::try_new(dev.get_pci_dev_ptr())?
             }
         )?)
     }
@@ -475,8 +487,7 @@ impl pci::Driver for E1000Drv {
     fn remove(data: &Self::Data) {
         pr_info!("Rust for linux e1000 driver demo (remove)\n");
         unsafe {
-            let mut pci_device = pci::Device::from_ptr(data.pci_ptr as *mut bindings::pci_dev);
-            pci_device.release_selected_regions(data.bars);
+            bindings::pci_release_selected_regions(*data.pci_ptr, data.bars)
         }
     }
 }
