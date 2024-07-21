@@ -267,7 +267,7 @@ impl Device {
     ///
     /// `ptr` must be non-null and valid. It must remain valid for the lifetime of the returned
     /// instance.
-    unsafe fn from_ptr(ptr: *mut bindings::pci_dev) -> Self {
+    pub unsafe fn from_ptr(ptr: *mut bindings::pci_dev) -> Self {
         Self { ptr }
     }
 
@@ -321,6 +321,17 @@ impl Device {
         } else {
             Ok(())
         }
+    }
+
+    /// Release 
+    pub fn release_selected_regions(&mut self, bars: i32){
+        // SAFETY: By the type invariants, we know that `self.ptr` is non-null and valid.
+        unsafe { bindings::pci_release_selected_regions(self.ptr, bars) };
+    }
+
+    /// Get raw ptr
+    pub fn get_pci_dev_ptr(&mut self) -> *mut bindings::pci_dev {
+        self.ptr
     }
 
     /// Get address for accessing the device

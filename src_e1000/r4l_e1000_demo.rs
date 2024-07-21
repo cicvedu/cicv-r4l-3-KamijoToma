@@ -7,9 +7,11 @@
 use core::iter::Iterator;
 use core::sync::atomic::AtomicPtr;
 
-use kernel::pci::Resource;
+use kernel::driver::DeviceRemoval;
+use kernel::pci::{Device, Resource};
 use kernel::prelude::*;
 use kernel::sync::Arc;
+use kernel::net::Registration;
 use kernel::{pci, device, driver, bindings, net, dma, c_str};
 use kernel::device::RawDevice;
 use kernel::sync::SpinLock;
@@ -293,11 +295,16 @@ impl kernel::irq::Handler for E1000InterruptHandler {
 /// the private data for the adapter
 struct E1000DrvPrvData {
     _netdev_reg: net::Registration<NetDevice>,
+    pci_ptr: usize,
+    bars: i32,
 }
 
 impl driver::DeviceRemoval for E1000DrvPrvData {
     fn device_remove(&self) {
         pr_info!("Rust for linux e1000 driver demo (device_remove)\n");
+        // let dev = self._netdev_reg.dev_get();
+        // let bars = dev.select_bars((bindings::IORESOURCE_MEM | bindings::IORESOURCE_IO) as u64);
+        // dev.release_selected_regions(bars);
     }
 }
 
@@ -352,7 +359,8 @@ impl net::NapiPoller for NapiHandler {
     }
 }
 
-struct E1000Drv {}
+struct E1000Drv {
+}
 
 
 
@@ -378,17 +386,13 @@ impl pci::Driver for E1000Drv {
 
         // the underlying will call `pci_enable_device()`. the R4L framework doesn't support `pci_enable_device_memory()` now.
         dev.enable_device()?;
-
         // ask the os to reserve the physical memory region of the selected bars.
         dev.request_selected_regions(bars, c_str!("e1000 reserved memory"))?;
-
         // set device to master mode.
         dev.set_master();
-
         // get resource(memory range) provided by BAR0
         let mem_res = dev.iter_resource().next().ok_or(kernel::error::code::EIO)?;
         let io_res = dev.iter_resource().skip(1).find(|r:&Resource|r.check_flags(bindings::IORESOURCE_IO)).ok_or(kernel::error::code::EIO)?;
-
         // TODO pci_save_state(pdev); not supported by crate now, only have raw C bindings.
 
         // alloc new ethernet device, this line represent the `alloc_etherdev()` and `SET_NETDEV_DEV()` in C version.
@@ -462,12 +466,18 @@ impl pci::Driver for E1000Drv {
             E1000DrvPrvData{
                 // Must hold this registration, or the device will be removed.
                 _netdev_reg: netdev_reg,
+                bars: bars,
+                pci_ptr: dev.get_pci_dev_ptr() as usize
             }
         )?)
     }
 
     fn remove(data: &Self::Data) {
         pr_info!("Rust for linux e1000 driver demo (remove)\n");
+        unsafe {
+            let mut pci_device = pci::Device::from_ptr(data.pci_ptr as *mut bindings::pci_dev);
+            pci_device.release_selected_regions(data.bars);
+        }
     }
 }
 struct E1000KernelMod {
