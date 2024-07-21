@@ -96,4 +96,11 @@ make -C ../linux M=$PWD rust-analyzer
 
 *** 本作业参考了群内同学的讨论内容 ***
 
+## 作业5：实现一个字符设备
 
+实现read和write函数即可。
+
+![cicv_char_dev](char_dev.png)
+
+答：通过mknod命令创建。设备号f8,0。在rust代码中自动请求分配了主设备号，并设置了次设备号的起始数字0.
+和设备文件中的相吻合。
